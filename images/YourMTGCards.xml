@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Conceptual Data Model" id="Z6Pg1Y1t6wHD8h5IrAGr">
+    <mxGraphModel dx="1618" dy="686" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-1" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=23;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Frontend (Web-App)" vertex="1">
+          <mxGeometry height="360" width="320" x="260" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-2" parent="E6DvD0JX2o4h5OnQX-l3-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;View (HTML / CSS)&lt;/b&gt;&lt;br&gt;- UI (Regal-Übersicht)&lt;br&gt;- Suchmaske&lt;br&gt;- Buttons (Auslagern)" vertex="1">
+          <mxGeometry height="80" width="240" x="40" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-3" parent="E6DvD0JX2o4h5OnQX-l3-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;ViewModel (JavaScript)&lt;/b&gt;&lt;br&gt;- State Management&lt;br&gt;- Data Binding&lt;br&gt;- REST Client (fetch/axios)" vertex="1">
+          <mxGeometry height="80" width="240" x="40" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-4" edge="1" parent="E6DvD0JX2o4h5OnQX-l3-1" source="E6DvD0JX2o4h5OnQX-l3-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="E6DvD0JX2o4h5OnQX-l3-3" value="Data Binding &amp; Events">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-5" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=23;fillColor=#d5e8d4;strokeColor=#82b366;" value="Backend (Model)" vertex="1">
+          <mxGeometry height="260" width="360" x="800" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-6" parent="E6DvD0JX2o4h5OnQX-l3-5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;Java REST API Controller&lt;/b&gt;&lt;br&gt;- Endpunkte für Web-App" vertex="1">
+          <mxGeometry height="60" width="240" x="60" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-7" parent="E6DvD0JX2o4h5OnQX-l3-5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="&lt;b&gt;Java Services&lt;/b&gt;&lt;br&gt;- Lagerverwaltungs-Logik&lt;br&gt;- Hardware-Kommunikation&lt;br&gt;- MTG-API Fetching" vertex="1">
+          <mxGeometry height="80" width="240" x="60" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-9" edge="1" parent="E6DvD0JX2o4h5OnQX-l3-5" source="E6DvD0JX2o4h5OnQX-l3-6" target="E6DvD0JX2o4h5OnQX-l3-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-11" edge="1" parent="1" source="E6DvD0JX2o4h5OnQX-l3-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" target="E6DvD0JX2o4h5OnQX-l3-6" value="HTTP / REST (JSON)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-12" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ffe6cc;strokeColor=#d79b00;" value="&lt;b&gt;Datenbank&lt;/b&gt;&lt;br&gt;- Karteninventar&lt;br&gt;- Regalpositionen" vertex="1">
+          <mxGeometry height="100" width="120" x="920" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;b&gt;Hardware Controller&lt;/b&gt;&lt;br&gt;- Scanner&lt;br&gt;- Greifarm / Motoren" vertex="1">
+          <mxGeometry height="100" width="200" x="600" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-14" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" value="&lt;b&gt;MTG Drittanbieter API&lt;/b&gt;&lt;br&gt;- Kartenbilder&lt;br&gt;- Metadaten" vertex="1">
+          <mxGeometry height="100" width="160" x="1160" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-16" edge="1" parent="1" source="E6DvD0JX2o4h5OnQX-l3-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0;exitY=0.75;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" target="E6DvD0JX2o4h5OnQX-l3-13" value="Seriell / TCP / MQTT">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-17" edge="1" parent="1" source="E6DvD0JX2o4h5OnQX-l3-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.55;entryY=0.1;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.75;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" target="E6DvD0JX2o4h5OnQX-l3-14" value="HTTP (REST)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E6DvD0JX2o4h5OnQX-l3-10" edge="1" parent="1" source="E6DvD0JX2o4h5OnQX-l3-7" style="entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="E6DvD0JX2o4h5OnQX-l3-12">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="980" y="690" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
