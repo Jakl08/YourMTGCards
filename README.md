@@ -5,7 +5,22 @@ The concept was first developed in 2022.
 
 ## Architecture
 
-The frontend is intended to provide a card inventory, search, and controls for retrieving cards from storage. A Java backend will coordinate the web application with the inventory database, scanning and storage hardware, and a third-party Magic card API.
+The frontend is intended to provide a card inventory, search, and controls for retrieving cards from storage. Its static files are organized under `src/main/resources/static/`: `index.html` is the entry point, with styles in `css/` and JavaScript in `js/`. Spring Boot serves the page at the application root. The current page is a starter shell; card inventory and backend integrations are not implemented yet. A Java backend will coordinate the web application with the inventory database, scanning and storage hardware, and a third-party Magic card API.
+
+Backend Java packages are grouped under `space.dragonfruit.YourMTGCards.backend`:
+
+```text
+backend/
+├── config/       # Backend configuration
+├── controller/   # REST endpoints
+├── dto/          # API request and response objects
+├── exception/    # Exceptions and API error handling
+├── model/        # Domain models and persistence entities
+├── repository/   # Data access
+└── service/      # Application and business logic
+```
+
+The package folders are initialized with `package-info.java` files. Add backend classes to the corresponding package as the application grows.
 
 ![Conceptual YourMTGCards architecture](images/YourMTGCards.png)
 
