@@ -1,0 +1,22 @@
+services:
+  # Startet PostgreSQL als dauerhaften Datenspeicher für lokale Entwicklung.
+  database:
+    image: postgres:17
+    container_name: yourmtgcards-database
+    environment:
+      POSTGRES_DB: yourmtgcards
+      POSTGRES_USER: yourmtgcards
+      POSTGRES_PASSWORD: yourmtgcards
+    ports:
+      - "5432:5432"
+    volumes:
+      - yourmtgcards-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yourmtgcards -d yourmtgcards"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+# Behält Datenbankdaten über Neustarts des Containers hinweg.
+volumes:
+  yourmtgcards-postgres:

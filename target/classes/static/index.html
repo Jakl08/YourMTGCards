@@ -1,27 +1,77 @@
 <!doctype html>
 <html lang="de">
   <head>
+    <!-- Legt Zeichensatz, mobile Darstellung und die Beschreibung der Anwendung fest. -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="YourMTGCards - Verwaltung und Sortierung deiner Magic-Karten.">
     <title>YourMTGCards</title>
+
+    <!-- Lädt die Gestaltung und den JavaScript-Einstiegspunkt als ES-Modul. -->
     <link rel="stylesheet" href="/css/styles.css">
     <script type="module" src="/js/app.js"></script>
   </head>
   <body>
+    <!-- Kopfbereich und Markenlink der Anwendung. -->
     <header class="site-header">
       <a class="brand" href="/" aria-label="YourMTGCards Startseite">YourMTGCards</a>
+      <span class="header-caption">Magic-Karten Inventar</span>
     </header>
 
     <main>
+      <!-- Einleitung und Statusmeldungen der API. -->
       <section class="welcome" aria-labelledby="welcome-title">
-        <p class="eyebrow">Deine Sammlung, an einem Ort</p>
-        <h1 id="welcome-title">YourMTGCards</h1>
-        <p class="intro">
-          Die Grundlage für die digitale Verwaltung, Suche und Sortierung deiner
-          Magic: The Gathering-Karten.
-        </p>
-        <p id="app-status" class="status" role="status">Frontend wird geladen …</p>
+        <div>
+          <p class="eyebrow">Deine Sammlung, an einem Ort</p>
+          <h1 id="welcome-title">Kartenverwaltung</h1>
+          <p class="intro">Scans bestätigen, Drucke abgleichen und eingelagerte Karten wiederfinden.</p>
+        </div>
+        <p id="app-status" class="status" role="status" aria-live="polite">Verbindung wird hergestellt …</p>
+      </section>
+
+      <!-- Pending-Bereich: Ein Scan kann ausgewählt und mit einer Scryfall-Version bestätigt werden. -->
+      <section class="panel" aria-labelledby="pending-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Manueller Abgleich</p>
+            <h2 id="pending-title">Unbestätigte Scans</h2>
+          </div>
+          <button id="refresh-button" class="button button-secondary" type="button">Aktualisieren</button>
+        </div>
+        <div id="pending-list" class="card-grid" aria-live="polite"></div>
+      </section>
+
+      <!-- Scryfall-Suchergebnisse werden neben dem gewählten Scan als Artwork-Auswahl angezeigt. -->
+      <section class="panel" aria-labelledby="matching-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Scryfall</p>
+            <h2 id="matching-title">Passende Kartenausgabe</h2>
+          </div>
+        </div>
+        <form id="card-search-form" class="search-form">
+          <label class="visually-hidden" for="card-search">Kartenname für die Scryfall-Suche</label>
+          <input id="card-search" name="q" type="search" placeholder="Zum Beispiel: Black Lotus" required>
+          <button class="button" type="submit">Karten suchen</button>
+        </form>
+        <p id="selected-scan" class="help-text">Wähle zuerst einen Scan, um ihn anschließend zu bestätigen.</p>
+        <div id="candidate-list" class="card-grid"></div>
+      </section>
+
+      <!-- Inventar mit Freitextsuche und Auslagerungsanforderung pro physischem Exemplar. -->
+      <section class="panel" aria-labelledby="inventory-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Lagerbestand</p>
+            <h2 id="inventory-title">Alle Karten</h2>
+          </div>
+        </div>
+        <form id="inventory-search-form" class="search-form">
+          <label class="visually-hidden" for="inventory-search">Bestand nach Kartenname durchsuchen</label>
+          <input id="inventory-search" name="q" type="search" placeholder="Bestand durchsuchen">
+          <button class="button button-secondary" type="submit">Suchen</button>
+        </form>
+        <div id="inventory-list" class="card-grid" aria-live="polite"></div>
       </section>
     </main>
   </body>

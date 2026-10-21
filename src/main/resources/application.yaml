@@ -1,3 +1,23 @@
 spring:
   application:
     name: YourMTGCards
+  datasource:
+    # Die Werte lassen sich für lokale Entwicklung oder den Pi per Umgebungsvariable überschreiben.
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/yourmtgcards}
+    username: ${DATABASE_USERNAME:yourmtgcards}
+    password: ${DATABASE_PASSWORD:yourmtgcards}
+  jpa:
+    hibernate:
+      # Für den MVP werden Tabellen aus Entities erzeugt; produktive Migrationen sollten Flyway nutzen.
+      ddl-auto: update
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+yourmtgcards:
+  # Scans werden außerhalb des Webroots gespeichert und nur über einen kontrollierten Endpunkt ausgeliefert.
+  image-directory: ${CARD_IMAGE_DIRECTORY:./data/scans}
+  scryfall:
+    base-url: https://api.scryfall.com

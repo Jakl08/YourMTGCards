@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: space.dragonfruit.YourMTGCards.YourMtgCardsApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.242 s -- in space.dragonfruit.YourMTGCards.YourMtgCardsApplicationTests
