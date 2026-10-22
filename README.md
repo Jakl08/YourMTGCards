@@ -6,20 +6,18 @@ YourMTGCards verwaltet physische Magic: The Gathering-Karten. Der MVP nimmt Scan
 
 Das Frontend unter `src/main/resources/static/` zeigt unbestätigte Scans und den Bestand, bietet die Scryfall-Suche und erstellt Auslagerungsaufträge. Das Java-Backend stellt JSON- und Multipart-REST-Endpunkte bereit. Abstrakte Druckdaten liegen getrennt von physischen Exemplaren in PostgreSQL.
 
-Backend Java packages are grouped under `space.dragonfruit.YourMTGCards.backend`:
+Backend Java packages are grouped under `space.dragonfruit.YourMTGCards.backend` by responsibility:
 
 ```text
 backend/
-├── config/       # Backend configuration
-├── controller/   # REST endpoints
-├── dto/          # API request and response objects
-├── exception/    # Exceptions and API error handling
-├── model/        # Domain models and persistence entities
-├── repository/   # Data access
-└── service/      # Application and business logic
+├── scryfall_api/ # Scryfall-Anbindung und deren Antwortdaten
+├── datenbank/    # JPA-Entitäten und Datenbankzugriff
+├── web_api/      # REST-Endpunkte und Datenformate für die Weboberfläche
+├── physical_api/ # REST-Endpunkte und Datenformate für Raspberry-Pi-Hardware
+└── logic/        # Geschäftsabläufe und interne Services
 ```
 
-`dto/` enthält API-Datentransferobjekte; `exception/` vereinheitlicht Fehlerantworten. Die Pi-Software kann unabhängig entwickelt werden und spricht das weiter unten beschriebene HTTP-Protokoll.
+Die Verantwortlichkeiten der einzelnen Dateien sind in der [Projektübersicht](./PROJECT_OVERVIEW.md) beschrieben. Die Pi-Software kann unabhängig entwickelt werden und spricht das weiter unten beschriebene HTTP-Protokoll.
 
 ![Conceptual YourMTGCards architecture](images/YourMTGCards.png)
 

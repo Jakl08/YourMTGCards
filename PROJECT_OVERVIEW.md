@@ -1,271 +1,206 @@
 # Projektübersicht: YourMTGCards
 
-Dieses Dokument erklärt, welche Dateien zum Projekt gehören, wo die Aufgaben
-der Anwendung umgesetzt sind und wie die einzelnen Bereiche zusammenarbeiten.
-Es ist als Wegweiser gedacht: Für API-Beispiele und Startbefehle siehe auch
-[README.md](./README.md), für die ursprüngliche Anforderung [requirements_and_structure.md](./requirements_and_structure.md).
+Dieses Dokument erklärt, welche Dateien zum Projekt gehören, wo Aufgaben
+umgesetzt sind und wie die Bereiche zusammenarbeiten. Startbefehle und
+konkrete HTTP-Beispiele stehen in der [README.md](./README.md); das ursprüngliche
+Konzept steht in [requirements_and_structure.md](./requirements_and_structure.md).
 
-## 1. Projekt auf einen Blick
-
-YourMTGCards besteht aus vier miteinander verbundenen Bereichen:
-
-1. **Weboberfläche**: zeigt Scans und Bestand, sucht Karten und bestätigt den
-   passenden Scryfall-Druck.
-2. **Java-/Spring-Backend**: stellt die REST-Endpunkte bereit und setzt die
-   Geschäftsregeln um.
-3. **PostgreSQL-Datenbank und Bildspeicher**: halten Kartendaten, einzelne
-   physische Exemplare, Auslagerungsaufträge und Scanbilder fest.
-4. **Raspberry-Pi-Schnittstelle**: nimmt Scans entgegen und liefert der
-   Hardware offene Auslagerungsaufträge.
-
-Die Anwendung kann ohne angeschlossene Pi-Hardware entwickelt und gestartet
-werden. OCR, Set-Icon-Erkennung und die eigentliche Motor-/Regalsteuerung sind
-noch nicht implementiert.
-
-## 2. Verzeichnisstruktur
+## 1. Gesamtstruktur
 
 ```text
 YourMTGCards/
 ├── .mvn/wrapper/                 Maven-Wrapper-Konfiguration
-├── images/                       Architekturdiagramm (PNG und Quelldatei)
+├── images/                       Architekturdiagramm und Quelldatei
 ├── src/
 │   ├── main/
 │   │   ├── java/space/dragonfruit/YourMTGCards/
 │   │   │   ├── YourMtgCardsApplication.java
 │   │   │   └── backend/
-│   │   │       ├── config/       Backend-Konfiguration
-│   │   │       ├── controller/   REST-Endpunkte
-│   │   │       ├── dto/          HTTP-Eingabe- und Ausgabeobjekte
-│   │   │       ├── exception/    API-Fehlerbehandlung
-│   │   │       ├── model/        Datenbankobjekte und Zustände
-│   │   │       ├── repository/   Datenbankzugriff
-│   │   │       └── service/      Geschäftslogik und externe Dienste
+│   │   │       ├── scryfall_api/ Scryfall-Integration
+│   │   │       ├── datenbank/    Datenbankobjekte und Datenzugriff
+│   │   │       ├── web_api/      API für Browser/Weboberfläche
+│   │   │       ├── physical_api/ API für Pi-Hardware
+│   │   │       └── logic/        Geschäftsabläufe und Backend-Services
 │   │   └── resources/
-│   │       ├── application.yaml  Spring- und Datenbankkonfiguration
-│   │       └── static/           Weboberfläche (HTML, CSS, JavaScript)
+│   │       ├── application.yaml  Konfiguration
+│   │       └── static/           HTML, CSS und JavaScript der Weboberfläche
 │   └── test/                     automatisierte Tests
 ├── docker-compose.yml            lokale PostgreSQL-Datenbank
-├── pom.xml                       Java-Abhängigkeiten und Maven-Build
-├── README.md                     Startanleitung und Pi-HTTP-Protokoll
-└── requirements_and_structure.md ursprüngliche Anforderungen und Konzept
+├── pom.xml                       Abhängigkeiten und Maven-Build
+├── README.md                     Startanleitung und Pi-Protokoll
+└── requirements_and_structure.md ursprüngliches Konzept
 ```
 
-## 3. Ablauf der Anwendung
+Die fünf Ordner unter `backend/` sind nach ihrer Aufgabe getrennt:
 
-### 3.1 Scan empfangen
+| Ordner | Zuständigkeit |
+|---|---|
+| `scryfall_api/` | Suche in Scryfall, Abruf einzelner Drucke und Ergebnisformat für Kartenkandidaten. |
+| `datenbank/` | JPA-Entitäten, Statuswerte und Spring-Data-Repositories. |
+| `web_api/` | REST-Endpunkte und Ein-/Ausgabeobjekte für die Browser-Weboberfläche sowie API-Fehlerbehandlung. |
+| `physical_api/` | REST-Endpunkte und Ein-/Ausgabeobjekte für die Raspberry-Pi-Hardware. |
+| `logic/` | Fachabläufe, die API-Eingaben verarbeiten, Datenbankoperationen koordinieren und Scanbilder verwalten. |
 
-1. Die Pi-Software sendet UUID, Regalnummer, Fachnummer und optional
-   `recognizedName` als JSON sowie das Scanbild als JPEG oder PNG an
-   `POST /api/hardware/scans`.
-2. [HardwareController.java](./src/main/java/space/dragonfruit/YourMTGCards/backend/controller/HardwareController.java)
-   nimmt den Multipart-Request an.
-3. [InventoryService.java](./src/main/java/space/dragonfruit/YourMTGCards/backend/service/InventoryService.java)
-   prüft, dass die UUID neu ist, und legt das physische Exemplar im Status
-   `PENDING` an.
-4. [ScanImageStorageService.java](./src/main/java/space/dragonfruit/YourMTGCards/backend/service/ScanImageStorageService.java)
-   prüft den Dateityp und speichert das Bild unter einem servergenerierten
-   Dateinamen in `./data/scans` (konfigurierbar).
+## 2. Ablauf: vom Scan bis zur Auslagerung
 
-### 3.2 Scan mit einer Kartenausgabe abgleichen
+### 2.1 Scan empfangen
 
-1. Die Oberfläche lädt `PENDING`-Scans einschließlich ihres Scanbilds.
-2. Der Benutzer wählt einen Scan. Falls ein erkannter Name vorliegt, wird
-   dieser als Suchvorschlag eingesetzt.
-3. Die Suche läuft über `GET /api/cards/search?q=...` zum Backend und von dort
-   über [ScryfallService.java](./src/main/java/space/dragonfruit/YourMTGCards/backend/service/ScryfallService.java)
-   zur Scryfall-API.
-4. Der Benutzer wählt den passenden Druck anhand von Set, Sprache und Artwork.
-5. `POST /api/scans/{uuid}/confirm` lässt das Backend die Druck-ID bei Scryfall
-   prüfen. Das Backend speichert die Metadaten einmalig und verknüpft sie mit
-   dem physischen Exemplar; dessen Status wird `CONFIRMED`.
+1. Die Pi-Software sendet UUID, Regal, Fach und optional `recognizedName` als
+   JSON sowie ein JPEG-/PNG-Bild an `POST /api/hardware/scans`.
+2. `physical_api/HardwareController.java` nimmt die Anfrage an und delegiert
+   sie an die Geschäftslogik.
+3. `logic/InventoryService.java` prüft, dass die UUID neu ist, speichert das
+   Bild und legt ein Exemplar im Status `PENDING` in der Datenbank an.
+4. `logic/ScanImageStorageService.java` validiert das Bild und speichert es
+   standardmäßig außerhalb des Webroots unter `./data/scans`.
 
-### 3.3 Bestand durchsuchen und Karte auslagern
+### 2.2 Kartenausgabe bestätigen
 
-1. `GET /api/scans` liefert Exemplare zurück. Die optionale Suche `q` findet
-   Treffer im erkannten Namen oder bestätigten Kartennamen; `status` filtert
-   nach Zustand.
-2. Der Benutzer fordert die Auslagerung eines bestätigten Exemplars über
-   `POST /api/inventory/{uuid}/retrieval` an.
-3. Das Backend setzt die Karte auf `RETRIEVAL_REQUESTED` und speichert einen
-   Auftrag mit Status `QUEUED`.
+1. Die Weboberfläche lädt die Scans mit Status `PENDING` und zeigt die
+   Scanbilder an.
+2. Der Benutzer wählt einen Scan. Ein vom Pi mitgesendeter erkannter Name
+   kann als Suchvorschlag verwendet werden.
+3. `web_api/WebUIController.java` leitet die Suche an
+   `scryfall_api/ScryfallService.java` weiter, der die Scryfall-API abfragt.
+4. Der Benutzer wählt anhand von Set, Sprache und Artwork die passende Ausgabe.
+5. Das Backend prüft die Scryfall-ID, speichert die Kartendaten einmalig in
+   `datenbank/CardMetadata.java` und verknüpft den Scan damit. Der Status des
+   Exemplars wechselt zu `CONFIRMED`.
+
+### 2.3 Bestand durchsuchen und Karte auslagern
+
+1. `GET /api/scans` liefert Exemplare zurück. `q` sucht im erkannten oder
+   bestätigten Namen; `status` filtert nach Zustand.
+2. Die Weboberfläche fordert mit `POST /api/inventory/{uuid}/retrieval` die
+   Auslagerung eines bestätigten Exemplars an.
+3. `logic/InventoryService.java` wechselt den Kartenstatus zu
+   `RETRIEVAL_REQUESTED` und legt einen Auftrag mit Status `QUEUED` an.
 4. Die Pi-Software fragt `GET /api/hardware/retrieval-commands` ab und erhält
-   UUID sowie Regal- und Fachnummer.
-5. Nach erfolgreicher physischer Entnahme quittiert sie über
+   Auftrags-ID sowie Regal- und Fachnummer.
+5. Nach der physischen Entnahme quittiert sie mit
    `POST /api/hardware/retrieval-commands/{commandId}/complete`. Der Auftrag
-   wird `COMPLETED`, die Karte `RETRIEVED`.
+   wechselt auf `COMPLETED`, das Exemplar auf `RETRIEVED`.
 
-### 3.4 Fehlerbehandlung
+## 3. Dateien in `backend/`
 
-Controller und Services melden fachliche Fehler mit HTTP-Statuscodes.
-[ApiExceptionHandler.java](./src/main/java/space/dragonfruit/YourMTGCards/backend/exception/ApiExceptionHandler.java)
-formt fachliche Fehler, ungültige Eingaben und Fehler der externen Karten-API
-in ein einheitliches JSON-Format um. Die Browseroberfläche zeigt die
-Fehlermeldung im Statusbereich an.
+Alle folgenden Pfade sind relativ zu
+`src/main/java/space/dragonfruit/YourMTGCards/backend/`.
 
-## 4. Backend: Dateien und Aufgaben
-
-Alle Java-Dateien liegen unter
-`src/main/java/space/dragonfruit/YourMTGCards/`.
-
-### Anwendungseinstieg
+### `scryfall_api/` — externe Kartendaten
 
 | Datei | Aufgabe |
 |---|---|
-| `YourMtgCardsApplication.java` | Startet Spring Boot. Spring durchsucht ab diesem Paket die Controller, Services, Entities und Repositories. |
+| `ScryfallService.java` | Ruft Scryfall-Suchergebnisse und einzelne Drucke ab und wandelt die JSON-Antworten in interne Ergebnisobjekte um. |
+| `CardCandidateResponse.java` | Kompaktes Ergebnis für die Weboberfläche: Karten-ID, Name, Set, Sprache und Artwork-URL. |
+| `package-info.java` | Beschreibt die Scryfall-Integration als Java-Paket. |
 
-### Controller: HTTP-Endpunkte
-
-| Datei | Aufgabe |
-|---|---|
-| `backend/controller/HardwareController.java` | Pi-Endpunkte: Scan hochladen, offene Auslagerungsaufträge abholen und Auslagerung quittieren. |
-| `backend/controller/WebUIController.java` | Browser-Endpunkte: Bestand und Scans laden, Scryfall-Drucke suchen, Scan bestätigen, Scanbild laden und Auslagerung anfordern. |
-| `backend/controller/package-info.java` | Beschreibt das Controller-Paket; enthält selbst keine Endpunkte. |
-
-### DTO: HTTP-Datenformate
-
-DTO steht für „Data Transfer Object“. Diese Objekte bestimmen, welche Daten
-über die API hereinkommen oder zurückgegeben werden. Sie sind nicht selbst die
-Datenbanktabellen.
+### `datenbank/` — Entitäten und Datenbankzugriff
 
 | Datei | Aufgabe |
 |---|---|
-| `backend/dto/ScanSubmissionRequest.java` | Eingabedaten eines Hardware-Scans: UUID, Regal, Fach und optional erkannter Name. |
-| `backend/dto/ConfirmScanRequest.java` | Eingabe beim Bestätigen: die Scryfall-ID der ausgewählten Ausgabe. |
-| `backend/dto/CardCandidateResponse.java` | Suchtreffer aus Scryfall mit Name, Set, Sprache und Bild-URL. |
-| `backend/dto/InventoryCardResponse.java` | Sichere Darstellung eines physischen Exemplars für die Oberfläche; enthält keinen internen Dateipfad. |
-| `backend/dto/RetrievalCommandResponse.java` | Auftrag für die Pi-Hardware: Auftrags-ID, Karten-UUID und Lagerposition. |
-| `backend/dto/ApiErrorResponse.java` | Einheitliches Format für API-Fehler. |
+| `CardMetadata.java` | Entität der Tabelle `card_metadata`; speichert einen konkreten Kartendruck anhand der Scryfall-ID einmalig. |
+| `PhysicalCard.java` | Entität der Tabelle `physical_inventory`; speichert ein physisches Exemplar, Position, Scanbild, Status und Metadaten-Verknüpfung. |
+| `RetrievalCommand.java` | Entität der Tabelle `retrieval_commands`; speichert einen Hardware-Auslagerungsauftrag. |
+| `CardStatus.java` | Status eines Exemplars: `PENDING`, `CONFIRMED`, `RETRIEVAL_REQUESTED` oder `RETRIEVED`. |
+| `CommandStatus.java` | Status eines Auftrags: `QUEUED` oder `COMPLETED`. |
+| `CardMetadataRepository.java` | Sucht und speichert Kartendaten nach ihrer Scryfall-ID. |
+| `PhysicalCardRepository.java` | Sucht und speichert physische Exemplare, unter anderem nach Name und Status. |
+| `RetrievalCommandRepository.java` | Sucht und speichert Auslagerungsaufträge nach ihrem Zustand. |
+| `package-info.java` | Beschreibt das Datenbankpaket. |
 
-### Geschäftslogik und Integrationen
+`CardMetadata` und `PhysicalCard` sind getrennt: Mehrere physische Exemplare
+können auf denselben Kartendruck verweisen, ohne seine Metadaten zu duplizieren.
 
-| Datei | Aufgabe |
-|---|---|
-| `backend/service/InventoryService.java` | Zentrale Fachlogik für Scans, Suche im Bestand, Bestätigung, Statuswechsel und Auslagerungsaufträge. |
-| `backend/service/ScanImageStorageService.java` | Validiert JPEG/PNG, speichert Scanbilder und liest sie für den Bild-Endpunkt aus. |
-| `backend/service/ScryfallService.java` | Ruft Scryfall-Suchergebnisse und einzelne Drucke ab und wandelt sie in API-Antworten um. |
-| `backend/service/package-info.java` | Beschreibt das Service-Paket; enthält selbst keine Geschäftslogik. |
-
-### Datenbankzugriff
+### `web_api/` — API für die Browser-Weboberfläche
 
 | Datei | Aufgabe |
 |---|---|
-| `backend/repository/CardMetadataRepository.java` | Sucht und speichert abstrakte Kartendaten über ihre Scryfall-ID. |
-| `backend/repository/PhysicalCardRepository.java` | Sucht und speichert physische Exemplare. |
-| `backend/repository/RetrievalCommandRepository.java` | Sucht und speichert Auslagerungsaufträge. |
-| `backend/repository/package-info.java` | Beschreibt das Repository-Paket. |
+| `WebUIController.java` | Endpunkte für Bestand, Scryfall-Kartensuche, Scanbestätigung, Bildauslieferung und Auslagerungsanforderung. |
+| `ConfirmScanRequest.java` | Eingabeobjekt mit der vom Benutzer gewählten Scryfall-ID. |
+| `InventoryCardResponse.java` | Ausgabeobjekt für ein Exemplar; enthält einen Bild-Endpunkt statt eines lokalen Dateipfads. |
+| `ApiErrorResponse.java` | Einheitliches JSON-Format für Fehlerantworten. |
+| `ApiException.java` | Fachlicher Fehler mit HTTP-Status und lesbarer Meldung. |
+| `ApiExceptionHandler.java` | Übersetzt Fach-, Validierungs- und Scryfall-Fehler in HTTP-Fehlerantworten. |
+| `package-info.java` | Beschreibt die Web-API als Java-Paket. |
 
-Spring Data JPA erstellt die Standardoperationen zum Lesen und Schreiben. Die
-Methodennamen in den Repository-Interfaces beschreiben zusätzliche Suchabfragen.
-
-### Datenbankmodelle und Statuswerte
-
-| Datei | Datenbankobjekt / Bedeutung |
-|---|---|
-| `backend/model/CardMetadata.java` | Tabelle `card_metadata`: einmalige Daten eines konkreten Scryfall-Drucks (ID, Name, Set, Sprache, Bild-URL). |
-| `backend/model/PhysicalCard.java` | Tabelle `physical_inventory`: einzelnes Exemplar, UUID, Lagerposition, Scanbild, erkannter Name, Status und Verknüpfung zu den Metadaten. |
-| `backend/model/RetrievalCommand.java` | Tabelle `retrieval_commands`: persistenter Auslagerungsauftrag zu einem physischen Exemplar. |
-| `backend/model/CardStatus.java` | Zustände des Exemplars: `PENDING`, `CONFIRMED`, `RETRIEVAL_REQUESTED`, `RETRIEVED`. |
-| `backend/model/CommandStatus.java` | Zustände des Hardware-Auftrags: `QUEUED`, `COMPLETED`. |
-| `backend/model/package-info.java` | Beschreibt das Model-Paket. |
-| `backend/config/package-info.java` | Markiert den Paketbereich für Konfigurationsklassen; dort liegt derzeit keine eigene Konfigurationsklasse. |
-
-`CardMetadata` und `PhysicalCard` sind getrennt, damit viele physische Exemplare
-auf denselben Kartendruck verweisen können, ohne dieselben Kartendaten mehrfach
-zu speichern.
-
-### Fehlerbehandlung
+### `physical_api/` — API für die Raspberry-Pi-Hardware
 
 | Datei | Aufgabe |
 |---|---|
-| `backend/exception/ApiException.java` | Fachlicher Fehler mit passendem HTTP-Status und verständlicher Meldung. |
-| `backend/exception/ApiExceptionHandler.java` | Wandelt fachliche Fehler, Validierungsfehler und Scryfall-Verbindungsfehler in JSON-Antworten um. |
-| `backend/exception/package-info.java` | Beschreibt das Exception-Paket. |
+| `HardwareController.java` | Endpunkte zum Hochladen eines Scans, Abholen offener Aufträge und Quittieren einer Auslagerung. |
+| `ScanSubmissionRequest.java` | JSON-Eingabe mit UUID, Regalnummer, Fachnummer und optional erkanntem Kartennamen. |
+| `RetrievalCommandResponse.java` | Auftragsantwort mit Auftrags-ID, Karten-UUID und Lagerposition. |
+| `package-info.java` | Beschreibt die Hardware-API als Java-Paket. |
 
-## 5. Weboberfläche: Dateien und Aufgaben
-
-| Datei | Aufgabe |
-|---|---|
-| `src/main/resources/static/index.html` | Struktur der Seite: Kopfbereich, Status, Pending-Scans, Scryfall-Suche und Bestand. Enthält die IDs, an die JavaScript seine Bedienaktionen bindet. |
-| `src/main/resources/static/js/app.js` | Lädt API-Daten, rendert Karten und verarbeitet Auswahl, Suche, Bestätigung, Auslagerung und Fehleranzeigen. |
-| `src/main/resources/static/css/styles.css` | Farben, Layout, Buttons, Karten-/Bestandsdarstellung, Fokuszustände und Anpassung an schmale Bildschirme. |
-
-### JavaScript-Ablauf in `app.js`
-
-1. `requestJson` kommuniziert mit der Backend-API und behandelt Fehler.
-2. `makeTextElement` erzeugt Text-Elemente ohne Kartennamen als HTML zu
-   interpretieren.
-3. `showStatus` zeigt Lade-, Erfolgs- und Fehlermeldungen.
-4. `renderPendingCard`, `searchCandidates` und `renderInventoryCard` bauen die
-   sichtbaren Kartenkacheln aus API-Antworten.
-5. `loadPendingCards` und `loadInventory` laden die jeweiligen Listen.
-6. Event-Handler verbinden Formular- und Button-Aktionen mit den API-Endpunkten.
-7. Am Ende werden Pending-Scans und Bestand beim Seitenaufruf geladen.
-
-## 6. Konfiguration, Build und lokale Dateien
+### `logic/` — Geschäftsabläufe
 
 | Datei | Aufgabe |
 |---|---|
-| `pom.xml` | Maven-Projektdefinition: Java-/Spring-Boot-Version, Abhängigkeiten und Build-Plugin. |
-| `.mvn/wrapper/maven-wrapper.properties` | Legt die Maven-Version fest, die `mvnw` automatisch herunterlädt und verwendet. |
-| `mvnw`, `mvnw.cmd` | Startskripte des Maven Wrappers für Unix/macOS/Linux beziehungsweise Windows. |
-| `src/main/resources/application.yaml` | Spring-Anwendungsname, Datenbankverbindung, JPA-Schemaabgleich, Upload-Limits, Bildverzeichnis und Scryfall-Adresse. |
-| `docker-compose.yml` | Startet PostgreSQL lokal mit persistentem Volume und Gesundheitsprüfung. |
-| `src/test/java/space/dragonfruit/YourMTGCards/YourMtgCardsApplicationTests.java` | Prüft den Spring-Kontext und das Speichern eines neuen Exemplars im Status `PENDING`; verwendet H2 statt PostgreSQL. |
-| `.vscode/settings.json` | Projektbezogene Einstellungen für Visual Studio Code. |
+| `InventoryService.java` | Zentrale Fachlogik für Scanannahme, Suche, Bestätigung, Statuswechsel und Auslagerungsaufträge. |
+| `ScanImageStorageService.java` | Prüft JPEG-/PNG-Uploads und speichert beziehungsweise liest Bilder außerhalb des Webroots. |
+| `package-info.java` | Beschreibt das Paket für Geschäftslogik und interne Services. |
 
-Beim lokalen Start werden Scanbilder standardmäßig unter `./data/scans`
-abgelegt. Dieser Ordner ist kein Teil der Webdateien. Datenbankadresse und
-Zugangsdaten lassen sich über Umgebungsvariablen überschreiben; Details stehen
-in der README.
+## 4. Weboberfläche
 
-## 7. Sonstige Projektdateien
+Die Oberfläche liegt unter `src/main/resources/static/`:
 
 | Datei | Aufgabe |
 |---|---|
-| `README.md` | Einstieg: Starten, Testen, Konfiguration und konkrete Beispiele des Pi-HTTP-Protokolls. |
-| `requirements_and_structure.md` | Ursprüngliche fachliche Anforderungen und Architekturidee; beschreibt teils geplante Funktionen, die noch nicht implementiert sind. |
-| `HELP.md` | Von der Spring-Boot-Projektvorlage erzeugte Links zu Referenzdokumentation und Guides. |
-| `images/YourMTGCards.png` | Visuelle Darstellung des Architekturkonzepts; in der README eingebunden. |
-| `images/YourMTGCards.xml` | Quelldatei des Architekturdiagramms. |
+| `index.html` | Seitenstruktur mit Bereichen für unbestätigte Scans, Scryfall-Suche und Bestand. |
+| `js/app.js` | Lädt API-Daten, rendert Karten und behandelt Suche, Bestätigung, Auslagerung und Fehlermeldungen. |
+| `css/styles.css` | Farben, Layout, Kartenkacheln, Buttons, Fokusdarstellung und mobile Ansicht. |
 
-### Maven-Ausgabe (`target/`)
+`app.js` initialisiert die Listen beim Seitenstart. Anschließend verbinden
+Event-Handler die Formulare und Buttons mit den Endpunkten im Backend. Texte
+aus Karten- und API-Daten werden als Text dargestellt, nicht als HTML
+interpretiert.
 
-`target/` enthält von Maven erzeugte Dateien, zum Beispiel kompilierte
-`.class`-Dateien, kopierte Webressourcen, Testberichte und Build-Metadaten.
-Diese Dateien werden bei einem Build neu erzeugt. Änderungen sollten deshalb
-an den Quelldateien unter `src/` oder an der Maven-Konfiguration erfolgen,
-nicht direkt in `target/`.
+## 5. Konfiguration, Tests und weitere Projektdateien
 
-## 8. Welche Datei öffne ich für welche Änderung?
-
-| Ich möchte … | Hier anfangen |
+| Datei | Aufgabe |
 |---|---|
-| einen API-Endpunkt ergänzen | passender Controller unter `backend/controller/` |
-| Geschäftsregeln oder Statusübergänge ändern | `backend/service/InventoryService.java` und gegebenenfalls `backend/model/` |
-| Tabellen oder Beziehungen ändern | `backend/model/`, danach Tests prüfen |
-| neue Datenbankabfrage ergänzen | passendes Interface unter `backend/repository/` |
-| ein JSON-Format ändern | passendes Record unter `backend/dto/` |
-| Fehler einheitlich zurückgeben | `backend/exception/` |
-| mit Scryfall kommunizieren | `backend/service/ScryfallService.java` |
-| Bildspeicherung ändern | `backend/service/ScanImageStorageService.java` und `application.yaml` |
-| Text, Bereiche oder Formulare der Seite ändern | `static/index.html` |
-| Verhalten, Laden oder Klickaktionen ändern | `static/js/app.js` |
-| Aussehen oder mobile Darstellung ändern | `static/css/styles.css` |
-| Datenbank lokal starten oder konfigurieren | `docker-compose.yml` und `application.yaml` |
-| Hardware-Protokoll oder Startanleitung nachschlagen | `README.md` |
-| Tests hinzufügen oder ändern | `src/test/java/` |
+| `src/main/java/space/dragonfruit/YourMTGCards/YourMtgCardsApplication.java` | Startpunkt; aktiviert Spring Boot und den automatischen Scan der Backend-Pakete. |
+| `src/main/resources/application.yaml` | Datenbankadresse, JPA-Schemaabgleich, Upload-Grenzen, Bildverzeichnis und Scryfall-Basisadresse. |
+| `docker-compose.yml` | Startet PostgreSQL lokal und legt Daten in einem persistenten Volume ab. |
+| `pom.xml` | Java-/Spring-Boot-Version, Bibliotheken und Build-Konfiguration für Maven. |
+| `.mvn/wrapper/maven-wrapper.properties` | Legt die Maven-Version für den Wrapper fest. |
+| `mvnw`, `mvnw.cmd` | Maven-Wrapper-Startskripte für Unix/macOS/Linux beziehungsweise Windows. |
+| `src/test/java/space/dragonfruit/YourMTGCards/YourMtgCardsApplicationTests.java` | Prüft den Spring-Kontext und das Speichern eines neuen Exemplars mit Status `PENDING`; verwendet H2. |
+| `README.md` | Installations-/Startbefehle und konkretes HTTP-Protokoll für den Raspberry Pi. |
+| `requirements_and_structure.md` | Ursprüngliche Anforderungen und fachliches Konzept. |
+| `HELP.md` | Von der Spring-Boot-Vorlage erzeugte Links zu Referenzdokumentation. |
+| `images/YourMTGCards.png`, `images/YourMTGCards.xml` | Architekturdiagramm und Quelldatei. |
+| `.vscode/settings.json` | Projekteinstellungen für Visual Studio Code. |
 
-## 9. Bewusste Grenzen des aktuellen MVP
+`target/` enthält generierte Maven-Ausgaben wie kompilierte Klassen, kopierte
+Webdateien und Testberichte. Änderungen werden in `src/`, `pom.xml` oder den
+Konfigurationsdateien vorgenommen, nicht direkt in `target/`.
 
-- **Noch keine OCR/Bilderkennung:** `recognizedName` kann optional von der
-  Pi-Software geliefert werden; andernfalls wählt der Benutzer die Karte
-  manuell aus.
-- **Noch keine eigentliche Hardwaresteuerung:** Das Backend speichert
-  Auslagerungsaufträge und bietet sie der Pi-Software an, steuert aber keine
-  Motoren oder Sensoren.
-- **Noch keine API-Authentifizierung:** Die Hardware-Endpunkte sind im MVP
-  nicht geschützt. Das System daher nur in einem vertrauenswürdigen Netzwerk
-  betreiben.
-- **Schemaänderungen:** Hibernate aktualisiert das Schema für den MVP
-  automatisch. Vor einem produktiven Betrieb sollten Datenbankmigrationen
-  eingerichtet und die Standard-Zugangsdaten ersetzt werden.
+## 6. Wo ändere ich etwas?
+
+| Änderung | Einstiegspunkt |
+|---|---|
+| Scryfall-Suche oder Scryfall-Antworten | `backend/scryfall_api/` |
+| Datenbanktabellen oder Beziehungen | `backend/datenbank/` |
+| Datenbankabfragen | `backend/datenbank/*Repository.java` |
+| Browser-API oder deren JSON-Formate | `backend/web_api/` |
+| Pi-Protokoll oder Hardware-JSON-Formate | `backend/physical_api/` |
+| Fachregeln und Statusübergänge | `backend/logic/InventoryService.java` und `backend/datenbank/` |
+| Bildvalidierung und -speicherung | `backend/logic/ScanImageStorageService.java` und `application.yaml` |
+| Seitentext und HTML-Struktur | `static/index.html` |
+| Verhalten und Klickaktionen im Browser | `static/js/app.js` |
+| Layout und Darstellung | `static/css/styles.css` |
+| PostgreSQL lokal oder Verbindungswerte | `docker-compose.yml` und `application.yaml` |
+| Testfälle | `src/test/java/` |
+
+## 7. Grenzen des aktuellen MVP
+
+- OCR und Erkennung von Kartennamen oder Set-Symbolen sind nicht implementiert.
+  Ein erkannter Name kann optional von der Pi-Software mitgeschickt werden.
+- Die Pi-Software sowie Motoren- und Sensorsteuerung sind nicht Teil dieses
+  Backends; es stellt nur die HTTP-Schnittstelle und persistente Aufträge bereit.
+- Hardware-Endpunkte sind noch nicht authentifiziert. Die Anwendung daher nur
+  in einem vertrauenswürdigen lokalen Netzwerk betreiben.
+- Hibernate aktualisiert das Datenbankschema im MVP automatisch. Vor einem
+  Produktivbetrieb sollten Migrationen und sichere Zugangsdaten eingerichtet
+  werden.

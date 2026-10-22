@@ -3,8 +3,9 @@ package space.dragonfruit.YourMTGCards;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import space.dragonfruit.YourMTGCards.backend.model.PhysicalCard;
-import space.dragonfruit.YourMTGCards.backend.repository.PhysicalCardRepository;
+import space.dragonfruit.YourMTGCards.backend.datenbank.CardStatus;
+import space.dragonfruit.YourMTGCards.backend.datenbank.PhysicalCard;
+import space.dragonfruit.YourMTGCards.backend.datenbank.PhysicalCardRepository;
 
 /** Prüft den Anwendungsstart und die Speicherung einzelner physischer Scans in der Testdatenbank. */
 @SpringBootTest(properties = {
@@ -37,7 +38,7 @@ class YourMtgCardsApplicationTests {
 		PhysicalCard savedCard = physicalCardRepository.saveAndFlush(card);
 
 		org.junit.jupiter.api.Assertions.assertEquals(
-				space.dragonfruit.YourMTGCards.backend.model.CardStatus.PENDING,
+				CardStatus.PENDING,
 				savedCard.getStatus());
 		org.junit.jupiter.api.Assertions.assertTrue(physicalCardRepository.existsById(savedCard.getId()));
 	}

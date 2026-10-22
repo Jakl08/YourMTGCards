@@ -32,19 +32,32 @@ Speichert jedes einzelne Exemplar, das im Regal liegt.
 
 ## 3. Backend Struktur
 
-Das Backend wird in Java (beispielsweise mit Spring Boot) entwickelt und folgt einer klassischen Schichtenarchitektur:
+Das Backend ist nach den fünf fachlichen Verantwortungsbereichen organisiert.
+Die Java-Pakete liegen unter
+`src/main/java/space/dragonfruit/YourMTGCards/backend/`:
 
-**A. Controller Layer (REST-APIs)**
-* `HardwareController`: Nimmt Daten der Maschine entgegen (Scan-Bilder, UUIDs, Lagerpositionen) und sendet Auslagerungsbefehle an den Maschinen-Controller.
-* `WebUIController`: Stellt Endpunkte für die Webapplikation bereit (Inventar abrufen, unbestätigte Scans auflisten, Karte bestätigen).
+```text
+backend/
+├── scryfall_api/ # Kommunikation mit Scryfall und Suchtreffer
+├── datenbank/    # JPA-Entitäten, Statuswerte und Datenbankzugriff
+├── web_api/      # REST-Endpunkte und JSON-Formate für die Weboberfläche
+├── physical_api/ # REST-Endpunkte und JSON-Formate für die Pi-Hardware
+└── logic/        # Geschäftsabläufe für Bestand, Scans und Bildspeicherung
+```
 
-**B. Service Layer (Geschäftslogik)**
-* `ScanProcessingService`: Verarbeitet eingehende Bilder, speichert sie lokal und nutzt Bilderkennung/OCR zur Identifikation von Kartennamen und Set-Symbolen.
-* `MTGApiService`: Kommuniziert mit der externen MTG-API (z.B. Scryfall), um Metadaten und verschiedene Kartenversionen basierend auf dem erkannten Text abzurufen.
-* `InventoryService`: Verwaltet die Verknüpfung zwischen gescannten Karten und den bestätigten API-Daten.
+**`scryfall_api`** kapselt die Suche nach Kartendrucken und das Laden einer
+einzelnen Ausgabe.
+**`datenbank`** enthält die getrennten Kartendaten, physischen Exemplare,
+Auslagerungsaufträge und die zugehörigen Repositories.
+**`web_api`** stellt Bestand, Suche, Bestätigung und Fehlerantworten für das
+Browser-Frontend bereit.
+**`physical_api`** nimmt Scans entgegen und stellt offene
+Auslagerungsbefehle für die Raspberry-Pi-Software bereit.
+**`logic`** setzt die Abläufe um, die von Web- und Hardware-API genutzt werden.
 
-**C. Repository Layer (Data Access)**
-* Nutzt Frameworks wie JPA/Hibernate, um die Java-Objekte in die Tabellen `Card_Metadata` und `Physical_Inventory` zu persistieren.
+Die Verzeichnisnamen spiegeln damit wider, welche Funktionalität eine Klasse
+unterstützt. Details zu konkreten Dateien stehen in
+[PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
 ## 4. Workflow
 
