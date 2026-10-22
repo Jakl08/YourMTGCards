@@ -87,6 +87,8 @@ Erfolgreiche Uploads bekommen den Status `PENDING`. Das Bild wird lokal außerha
 
 Der Datenbank-Schemaabgleich verwendet im MVP `spring.jpa.hibernate.ddl-auto=update`. Vor produktivem Betrieb sollten Schemaänderungen über Migrationen wie Flyway verwaltet und die Standarddatenbank-Zugangsdaten ersetzt werden.
 
+Eine nach Dateien und Abläufen gegliederte Beschreibung des Projekts steht in der [Projektübersicht](./PROJECT_OVERVIEW.md).
+
 ```bat
 mvnw.cmd spring-boot:run
 ```
